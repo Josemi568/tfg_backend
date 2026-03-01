@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Form\UserType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,5 +78,27 @@ class UserController extends AbstractController
         }
 
         return $this->redirectToRoute('app_user_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/{id}/change-status', name: 'api_user_change_status', methods: ['POST'])]
+    public function changeStatus(int $id, UserRepository $userRepository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $user = $userRepository->find($id);
+
+        if (!$user) {
+            return new JsonResponse(['error' => 'user not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $status = $user->getStatus() ?? 0;
+        if ($status === 1) {
+            $user->setStatus(0);
+        } else {
+            $user->setStatus(1);
+        }
+
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        return new JsonResponse(['id' => $user->getId(), 'status' => $user->getStatus()]);
     }
 }

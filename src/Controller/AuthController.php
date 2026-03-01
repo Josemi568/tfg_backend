@@ -75,10 +75,51 @@ class AuthController extends AbstractController
         $user->setUsername($username);
         $hashed = password_hash($password, PASSWORD_BCRYPT);
         $user->setPassword($hashed);
+        // ensure new users are stored with ROLE_USER
+        $user->setRoles(['ROLE_USER']);
+        $user->setStatus(0);
 
         $em->persist($user);
         $em->flush();
 
         return new JsonResponse(['message' => 'user created'], Response::HTTP_CREATED);
+    }
+
+    #[Route('/user/{id}/change-role', name: 'api_change_role', methods: ['POST'])]
+    public function changeRole(int $id, UserRepository $userRepository, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $userRepository->find($id);
+
+        if (!$user) {
+            return new JsonResponse(['error' => 'user not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $roles = $user->getRoles();
+        if (in_array('ROLE_ADMIN', $roles, true)) {
+            $user->setRoles(['ROLE_USER']);
+        } else {
+            $user->setRoles(['ROLE_ADMIN']);
+        }
+
+        $em->persist($user);
+        $em->flush();
+
+        return new JsonResponse(['id' => $user->getId(), 'roles' => $user->getRoles()]);
+    }
+
+    #[Route('/users', name: 'api_users', methods: ['GET'])]
+    public function listUsers(UserRepository $userRepository): JsonResponse
+    {
+        $users = $userRepository->findAll();
+
+        $data = array_map(function (User $u) {
+            return [
+                'id' => $u->getId(),
+                'username' => $u->getUserIdentifier(),
+                'roles' => $u->getRoles(),
+            ];
+        }, $users);
+
+        return new JsonResponse($data);
     }
 }

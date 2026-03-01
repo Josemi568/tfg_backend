@@ -44,6 +44,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\ManyToMany(targetEntity: self::class, mappedBy: 'followers')]
     private Collection $follows;
 
+    #[ORM\Column]
+    private ?int $status = null;
+
     public function __construct()
     {
         $this->posts = new ArrayCollection();
@@ -88,7 +91,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $roles = $this->roles;
         // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+        // $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
     }
@@ -234,6 +237,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if ($this->follows->removeElement($follow)) {
             $follow->removeFollower($this);
         }
+
+        return $this;
+    }
+
+    public function getStatus(): ?int
+    {
+        return $this->status;
+    }
+
+    public function setStatus(int $status): static
+    {
+        $this->status = $status;
 
         return $this;
     }
