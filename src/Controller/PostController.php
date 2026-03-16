@@ -5,8 +5,10 @@ namespace App\Controller;
 use App\Entity\Post;
 use App\Form\PostType;
 use App\Repository\PostRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -77,5 +79,65 @@ class PostController extends AbstractController
         }
 
         return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
+    }
+    #[Route('/api/new', name: 'api_post_new', methods: ['POST'])]
+    public function newPost(Request $request, EntityManagerInterface $entityManager, UserRepository $userRepository): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data) {
+            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $title = $data['title'] ?? null;
+        $text = $data['description'] ?? null;
+        $imgVideo = $data['img_video'] ?? null;
+        $authorId = $data['author'] ?? null;
+
+        if (!$title || !$text || !$authorId) {
+            return new JsonResponse(['error' => 'Missing required fields (title, description, author)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $author = $userRepository->find($authorId);
+        if (!$author) {
+            return new JsonResponse(['error' => 'Author not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $post = new Post();
+        $post->setTitle($title);
+        $post->setText($text);
+        
+        // Si img_video contiene base64, lo decodificamos y guardamos el archivo
+        if ($imgVideo && preg_match('/^data:(image|video)\/(\w+);base64,/', $imgVideo, $type)) {
+            $dataEncoded = substr($imgVideo, strpos($imgVideo, ',') + 1);
+            $dataDecoded = base64_decode($dataEncoded);
+            $extension = strtolower($type[2]);
+            $fileName = uniqid() . '.' . $extension;
+            
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/posts';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            file_put_contents($uploadDir . '/' . $fileName, $dataDecoded);
+            $post->setImgVideo('/uploads/posts/' . $fileName);
+        } else {
+            // Si el frontend sube el archivo por otro medio y envía su nombre, o si está vacío
+            $post->setImgVideo($imgVideo);
+        }
+
+        $post->setAuthor($author);
+        $post->setDate(new \DateTime());
+        $post->setLikes(0);
+        $post->setDislikes(0);
+        $post->setStatus(0);
+
+        $entityManager->persist($post);
+        $entityManager->flush();
+
+        return new JsonResponse([
+            'message' => 'Post created successfully', 
+            'post_id' => $post->getId()
+        ], Response::HTTP_CREATED);
     }
 }
