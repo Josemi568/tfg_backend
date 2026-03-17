@@ -140,4 +140,27 @@ class PostController extends AbstractController
             'post_id' => $post->getId()
         ], Response::HTTP_CREATED);
     }
+
+    #[Route('/api/all', name: 'api_post_all', methods: ['GET'])]
+    public function showPost(PostRepository $postRepository): JsonResponse
+    {
+        $posts = $postRepository->findAll();
+        $data = [];
+
+        foreach ($posts as $post) {
+            $data[] = [
+                'id' => $post->getId(),
+                'title' => $post->getTitle(),
+                'description' => $post->getText(),
+                'img_video' => $post->getImgVideo(),
+                'author' => $post->getAuthor() ? $post->getAuthor()->getUsername() : 'Anonymous',
+                'date' => $post->getDate() ? $post->getDate()->format('Y-m-d H:i:s') : null,
+                'likes' => $post->getLikes(),
+                'dislikes' => $post->getDislikes(),
+                'status' => $post->getStatus(),
+            ];
+        }
+
+        return new JsonResponse($data, Response::HTTP_OK);
+    }
 }
