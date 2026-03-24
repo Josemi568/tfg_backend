@@ -163,4 +163,51 @@ class PostController extends AbstractController
 
         return new JsonResponse($data, Response::HTTP_OK);
     }
+
+    #[Route('/api/like_dislike/{id}', name: 'api_post_like_dislike', methods: ['POST'])]
+    public function like_dislike(int $id, Request $request, EntityManagerInterface $entityManager, PostRepository $postRepository): JsonResponse
+    {
+        $post = $postRepository->find($id);
+
+        if (!$post) {
+            return new JsonResponse(['error' => 'Post not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        
+        // "La informacion de si ha dado a like o dislike le llegara por el front"
+        $action = $data['action'] ?? null; // 'like' or 'dislike'
+        $previousStatus = $data['previous_status'] ?? 'none'; // 'none', 'like', 'dislike'
+
+        if ($action === 'like') {
+            if ($previousStatus === 'dislike') {
+                $post->setLikes($post->getLikes() + 1);
+                $post->setDislikes(max(0, $post->getDislikes() - 1));
+            } elseif ($previousStatus === 'none') {
+                $post->setLikes($post->getLikes() + 1);
+            } elseif ($previousStatus === 'like') {
+                // Si vuelve a darle a like y ya le había dado, se lo quitamos
+                $post->setLikes(max(0, $post->getLikes() - 1));
+            }
+        } elseif ($action === 'dislike') {
+            if ($previousStatus === 'like') {
+                $post->setDislikes($post->getDislikes() + 1);
+                $post->setLikes(max(0, $post->getLikes() - 1));
+            } elseif ($previousStatus === 'none') {
+                $post->setDislikes($post->getDislikes() + 1);
+            } elseif ($previousStatus === 'dislike') {
+                // Si vuelve a darle a dislike y ya le había dado, se lo quitamos
+                $post->setDislikes(max(0, $post->getDislikes() - 1));
+            }
+        }
+
+        $entityManager->persist($post);
+        $entityManager->flush();
+
+        return new JsonResponse([
+            'message' => 'Action processed successfully',
+            'likes' => $post->getLikes(),
+            'dislikes' => $post->getDislikes()
+        ], Response::HTTP_OK);
+    }
 }
