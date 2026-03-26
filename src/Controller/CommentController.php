@@ -142,4 +142,26 @@ class CommentController extends AbstractController
 
         return new JsonResponse($data, Response::HTTP_OK);
     }
+
+    #[Route('/{id}/ban', name: 'api_comment_ban', methods: ['POST'])]
+    public function eliminarComment(int $id, CommentRepository $commentRepository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $comment = $commentRepository->find($id);
+
+        if (!$comment) {
+            return new JsonResponse(['error' => 'Comment not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $status = $comment->getStatus() ?? 0;
+        if ($status === 1) {
+            $comment->setStatus(0);
+        } else {
+            $comment->setStatus(1);
+        }
+
+        $entityManager->persist($comment);
+        $entityManager->flush();
+
+        return new JsonResponse(['id' => $comment->getId(), 'status' => $comment->getStatus()]);
+    }
 }

@@ -210,4 +210,26 @@ class PostController extends AbstractController
             'dislikes' => $post->getDislikes()
         ], Response::HTTP_OK);
     }
+
+    #[Route('/{id}/ban', name: 'api_post_ban', methods: ['POST'])]
+    public function banearPost(int $id, PostRepository $postRepository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $post = $postRepository->find($id);
+
+        if (!$post) {
+            return new JsonResponse(['error' => 'Post not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $status = $post->getStatus() ?? 0;
+        if ($status === 1) {
+            $post->setStatus(0);
+        } else {
+            $post->setStatus(1);
+        }
+
+        $entityManager->persist($post);
+        $entityManager->flush();
+
+        return new JsonResponse(['id' => $post->getId(), 'status' => $post->getStatus()]);
+    }
 }
