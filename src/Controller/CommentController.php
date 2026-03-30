@@ -25,26 +25,6 @@ class CommentController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_comment_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
-        $comment = new Comment();
-        $form = $this->createForm(CommentType::class, $comment);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($comment);
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_comment_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('comment/new.html.twig', [
-            'comment' => $comment,
-            'form' => $form,
-        ]);
-    }
-
     #[Route('/{id}', name: 'app_comment_show', methods: ['GET'])]
     public function show(Comment $comment): Response
     {
@@ -74,7 +54,7 @@ class CommentController extends AbstractController
     #[Route('/{id}', name: 'app_comment_delete', methods: ['POST'])]
     public function delete(Request $request, Comment $comment, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$comment->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $comment->getId(), $request->request->get('_token'))) {
             $entityManager->remove($comment);
             $entityManager->flush();
         }
@@ -82,6 +62,10 @@ class CommentController extends AbstractController
         return $this->redirectToRoute('app_comment_index', [], Response::HTTP_SEE_OTHER);
     }
 
+    /** 
+     * Función que permite crear un nuevo comentario con la información
+     * recibida desde el formulario del frontend.
+     */
     #[Route('/api/new', name: 'api_comment_new', methods: ['POST'])]
     public function newComment(Request $request, EntityManagerInterface $entityManager, UserRepository $userRepository, PostRepository $postRepository): JsonResponse
     {
@@ -119,11 +103,15 @@ class CommentController extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse([
-            'message' => 'Comment created successfully', 
+            'message' => 'Comment created successfully',
             'comment_id' => $comment->getId()
         ], Response::HTTP_CREATED);
     }
 
+    /** 
+     * Función que permite listar todos los comentarios
+     * registrados en la base de datos.
+     */
     #[Route('/api/all', name: 'api_comment_all', methods: ['GET'])]
     public function showComment(CommentRepository $commentRepository): JsonResponse
     {
@@ -143,6 +131,10 @@ class CommentController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK);
     }
 
+    /** 
+     * Función que permite banear un comentario sin eliminar
+     * su información desde la base de datos.
+     */
     #[Route('/{id}/ban', name: 'api_comment_ban', methods: ['POST'])]
     public function eliminarComment(int $id, CommentRepository $commentRepository, EntityManagerInterface $entityManager): JsonResponse
     {

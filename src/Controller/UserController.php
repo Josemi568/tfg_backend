@@ -72,7 +72,7 @@ class UserController extends AbstractController
     #[Route('/{id}', name: 'app_user_delete', methods: ['POST'])]
     public function delete(Request $request, User $user, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $user->getId(), $request->request->get('_token'))) {
             $entityManager->remove($user);
             $entityManager->flush();
         }
@@ -80,6 +80,10 @@ class UserController extends AbstractController
         return $this->redirectToRoute('app_user_index', [], Response::HTTP_SEE_OTHER);
     }
 
+    /** 
+     * Función que permite cambiar el estado de un usuario
+     * (banear o desbanear).
+     */
     #[Route('/{id}/change-status', name: 'api_user_change_status', methods: ['POST'])]
     public function changeStatus(int $id, UserRepository $userRepository, EntityManagerInterface $entityManager): JsonResponse
     {

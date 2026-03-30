@@ -14,6 +14,12 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class AuthController extends AbstractController
 {
+    /** 
+     * Función que permite al frontend hacer el inicio de sesión
+     * para cada usuario registrado en la base de datos.
+     * 
+     * Ademas permite tener la sesión iniciada durante una hora.
+     */
     #[Route('/login', name: 'api_login', methods: ['POST'])]
     public function login(Request $request, UserRepository $userRepository): JsonResponse
     {
@@ -37,7 +43,7 @@ class AuthController extends AbstractController
         }
 
         $now = time();
-        $exp = $now + 3600; // 1 hour
+        $exp = $now + 3600;
         $payload = [
             'sub' => $user->getId(),
             'username' => $user->getUserIdentifier(),
@@ -56,6 +62,10 @@ class AuthController extends AbstractController
         return new JsonResponse(['token' => $jwt]);
     }
 
+    /** 
+     * Función que permite registrar un nuevo usuario en la base de datos
+     * recibiendo la información de este mediante un formulario en el frontend.
+     */
     #[Route('/register', name: 'api_register', methods: ['POST'])]
     public function register(Request $request, EntityManagerInterface $em, UserRepository $userRepository): JsonResponse
     {
@@ -85,6 +95,9 @@ class AuthController extends AbstractController
         return new JsonResponse(['message' => 'user created'], Response::HTTP_CREATED);
     }
 
+    /** 
+     * Función que permite cambiar el rol de un usuario.
+     */
     #[Route('/user/{id}/change-role', name: 'api_change_role', methods: ['POST'])]
     public function changeRole(int $id, UserRepository $userRepository, EntityManagerInterface $em): JsonResponse
     {
@@ -107,6 +120,10 @@ class AuthController extends AbstractController
         return new JsonResponse(['id' => $user->getId(), 'roles' => $user->getRoles()]);
     }
 
+    /** 
+     * Función que permite listar toda la información de los usuarios 
+     * registrados en la base de datos.
+     */
     #[Route('/users', name: 'api_users', methods: ['GET'])]
     public function listUsers(UserRepository $userRepository): JsonResponse
     {

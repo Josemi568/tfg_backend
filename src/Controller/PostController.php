@@ -24,26 +24,6 @@ class PostController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_post_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
-        $post = new Post();
-        $form = $this->createForm(PostType::class, $post);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($post);
-            $entityManager->flush();
-
-            return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('post/new.html.twig', [
-            'post' => $post,
-            'form' => $form,
-        ]);
-    }
-
     #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
     public function show(Post $post): Response
     {
@@ -73,13 +53,18 @@ class PostController extends AbstractController
     #[Route('/{id}', name: 'app_post_delete', methods: ['POST'])]
     public function delete(Request $request, Post $post, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$post->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $post->getId(), $request->request->get('_token'))) {
             $entityManager->remove($post);
             $entityManager->flush();
         }
 
         return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
     }
+
+    /** 
+     * Función que permite crear un nuevo post recibiendo la información
+     * desde el formulario del frontend.
+     */
     #[Route('/api/new', name: 'api_post_new', methods: ['POST'])]
     public function newPost(Request $request, EntityManagerInterface $entityManager, UserRepository $userRepository): JsonResponse
     {
@@ -106,19 +91,19 @@ class PostController extends AbstractController
         $post = new Post();
         $post->setTitle($title);
         $post->setText($text);
-        
+
         // Si img_video contiene base64, lo decodificamos y guardamos el archivo
         if ($imgVideo && preg_match('/^data:(image|video)\/(\w+);base64,/', $imgVideo, $type)) {
             $dataEncoded = substr($imgVideo, strpos($imgVideo, ',') + 1);
             $dataDecoded = base64_decode($dataEncoded);
             $extension = strtolower($type[2]);
             $fileName = uniqid() . '.' . $extension;
-            
+
             $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/posts';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
-            
+
             file_put_contents($uploadDir . '/' . $fileName, $dataDecoded);
             $post->setImgVideo('/uploads/posts/' . $fileName);
         } else {
@@ -136,11 +121,15 @@ class PostController extends AbstractController
         $entityManager->flush();
 
         return new JsonResponse([
-            'message' => 'Post created successfully', 
+            'message' => 'Post created successfully',
             'post_id' => $post->getId()
         ], Response::HTTP_CREATED);
     }
 
+    /** 
+     * Función que permite listar todos los posts registrados
+     * en la base de datos.
+     */
     #[Route('/api/all', name: 'api_post_all', methods: ['GET'])]
     public function showPost(PostRepository $postRepository): JsonResponse
     {
@@ -164,6 +153,9 @@ class PostController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK);
     }
 
+    /** 
+     * Función que permite dar like o dislike a un post.
+     */
     #[Route('/api/like_dislike/{id}', name: 'api_post_like_dislike', methods: ['POST'])]
     public function like_dislike(int $id, Request $request, EntityManagerInterface $entityManager, PostRepository $postRepository): JsonResponse
     {
@@ -174,7 +166,7 @@ class PostController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
-        
+
         // "La informacion de si ha dado a like o dislike le llegara por el front"
         $action = $data['action'] ?? null; // 'like' or 'dislike'
         $previousStatus = $data['previous_status'] ?? 'none'; // 'none', 'like', 'dislike'
@@ -211,6 +203,10 @@ class PostController extends AbstractController
         ], Response::HTTP_OK);
     }
 
+    /** 
+     * Función que permite banear un post sin eliminarlo
+     * de la base de datos.
+     */
     #[Route('/{id}/ban', name: 'api_post_ban', methods: ['POST'])]
     public function banearPost(int $id, PostRepository $postRepository, EntityManagerInterface $entityManager): JsonResponse
     {
