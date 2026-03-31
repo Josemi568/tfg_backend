@@ -85,7 +85,7 @@ class AuthController extends AbstractController
         $user->setUsername($username);
         $hashed = password_hash($password, PASSWORD_BCRYPT);
         $user->setPassword($hashed);
-        // ensure new users are stored with ROLE_USER
+        // Se asegura de que los nuevos usuarios tengan el rol ROLE_USER
         $user->setRoles(['ROLE_USER']);
         $user->setStatus(0);
 
@@ -134,6 +134,11 @@ class AuthController extends AbstractController
                 'id' => $u->getId(),
                 'username' => $u->getUserIdentifier(),
                 'roles' => $u->getRoles(),
+                'status' => $u->getStatus(),
+                'posts' => array_map(fn($p) => $p->getId(), $u->getPosts()->toArray()),
+                'comments' => array_map(fn($c) => $c->getId(), $u->getComments()->toArray()),
+                'followers' => array_map(fn($f) => $f->getId(), $u->getFollowers()->toArray()),
+                'follows' => array_map(fn($f) => $f->getId(), $u->getFollows()->toArray()),
             ];
         }, $users);
 
