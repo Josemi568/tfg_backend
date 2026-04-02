@@ -105,4 +105,51 @@ class UserController extends AbstractController
 
         return new JsonResponse(['id' => $user->getId(), 'status' => $user->getStatus()]);
     }
+
+    /** 
+     * Función que permite a un usuario seguir o dejar de seguir a otro.
+     */
+    #[Route('/api/follow', name: 'api_user_follow', methods: ['POST'])]
+    public function followUser(Request $request, UserRepository $userRepository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $followerId = $data['followerId'] ?? null;
+        $followedId = $data['followedId'] ?? null;
+        $action = $data['action'] ?? null; // Espera 'follow' o 'unfollow'
+
+        if (!$followerId || !$followedId || !$action) {
+            return new JsonResponse(['error' => 'followerId, followedId and action are required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $follower = $userRepository->find($followerId);
+        $followed = $userRepository->find($followedId);
+
+        if (!$follower || !$followed) {
+            return new JsonResponse(['error' => 'user not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $currentFollows = $follower->getFollows() ?? 0;
+        $currentFollowers = $followed->getFollowers() ?? 0;
+
+        if ($action === 'follow') {
+            $follower->setFollows($currentFollows + 1);
+            $followed->setFollowers($currentFollowers + 1);
+        } elseif ($action === 'unfollow') {
+            $follower->setFollows(max(0, $currentFollows - 1));
+            $followed->setFollowers(max(0, $currentFollowers - 1));
+        } else {
+            return new JsonResponse(['error' => 'Invalid action. Must be "follow" or "unfollow"'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $entityManager->persist($follower);
+        $entityManager->persist($followed);
+        $entityManager->flush();
+
+        return new JsonResponse([
+            'message' => 'Action handled successfully',
+            'follower_follows' => $follower->getFollows(),
+            'followed_followers' => $followed->getFollowers()
+        ], Response::HTTP_OK);
+    }
 }

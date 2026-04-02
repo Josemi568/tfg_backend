@@ -88,6 +88,8 @@ class AuthController extends AbstractController
         // Se asegura de que los nuevos usuarios tengan el rol ROLE_USER
         $user->setRoles(['ROLE_USER']);
         $user->setStatus(0);
+        $user->setFollowers(0);
+        $user->setFollows(0);
 
         $em->persist($user);
         $em->flush();
@@ -137,8 +139,8 @@ class AuthController extends AbstractController
                 'status' => $u->getStatus(),
                 'posts' => array_map(fn($p) => $p->getId(), $u->getPosts()->toArray()),
                 'comments' => array_map(fn($c) => $c->getId(), $u->getComments()->toArray()),
-                'followers' => array_map(fn($f) => $f->getId(), $u->getFollowers()->toArray()),
-                'follows' => array_map(fn($f) => $f->getId(), $u->getFollows()->toArray()),
+                'followers' => $u->getFollowers(),
+                'follows' => $u->getFollows(),
             ];
         }, $users);
 
