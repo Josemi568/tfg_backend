@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Repository\PostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Firebase\JWT\JWT;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -145,5 +146,69 @@ class AuthController extends AbstractController
         }, $users);
 
         return new JsonResponse($data);
+    }
+
+    /** 
+     * Función que permite buscar usuarios o publicaciones en la base de datos.
+     * La petición se hará mediante POST o GET y recibirá 'type' (user o post) y 'query'.
+     */
+    #[Route('/search', name: 'api_search', methods: ['POST'])]
+    public function search(Request $request, UserRepository $userRepository, PostRepository $postRepository): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        $type = $data['type'] ?? $request->query->get('type');
+        $query = $data['query'] ?? $request->query->get('query');
+
+        if (!$type || !$query) {
+            return new JsonResponse(['error' => 'type and query are required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($type === 'user') {
+            $qb = $userRepository->createQueryBuilder('u');
+            $users = $qb->where('u.username LIKE :query')
+                        ->setParameter('query', '%' . $query . '%')
+                        ->getQuery()
+                        ->getResult();
+
+            $result = array_map(function (User $u) {
+                return [
+                    'id' => $u->getId(),
+                    'username' => $u->getUserIdentifier(),
+                    'roles' => $u->getRoles(),
+                    'status' => $u->getStatus(),
+                    'posts' => array_map(fn($p) => $p->getId(), $u->getPosts()->toArray()),
+                    'comments' => array_map(fn($c) => $c->getId(), $u->getComments()->toArray()),
+                    'followers' => $u->getFollowers(),
+                    'follows' => $u->getFollows(),
+                ];
+            }, $users);
+
+            return new JsonResponse($result);
+        } elseif ($type === 'post') {
+            $qb = $postRepository->createQueryBuilder('p');
+            $posts = $qb->where('p.title LIKE :query')
+                        ->setParameter('query', '%' . $query . '%')
+                        ->getQuery()
+                        ->getResult();
+
+            $result = array_map(function ($post) {
+                return [
+                    'id' => $post->getId(),
+                    'title' => $post->getTitle(),
+                    'description' => $post->getText(),
+                    'img_video' => $post->getImgVideo(),
+                    'author' => $post->getAuthor() ? $post->getAuthor()->getUsername() : 'Anonymous',
+                    'date' => $post->getDate() ? $post->getDate()->format('Y-m-d H:i:s') : null,
+                    'likes' => $post->getLikes(),
+                    'dislikes' => $post->getDislikes(),
+                    'status' => $post->getStatus(),
+                ];
+            }, $posts);
+
+            return new JsonResponse($result);
+        }
+
+        return new JsonResponse(['error' => 'invalid search type'], Response::HTTP_BAD_REQUEST);
     }
 }
