@@ -143,6 +143,7 @@ class PostController extends AbstractController
                 'description' => $post->getText(),
                 'img_video' => $post->getImgVideo(),
                 'author' => $post->getAuthor() ? $post->getAuthor()->getUsername() : 'Anonymous',
+                'author_status' => $post->getAuthor() ? $post->getAuthor()->getStatus() : 0,
                 'date' => $post->getDate() ? $post->getDate()->format('Y-m-d H:i:s') : null,
                 'likes' => $post->getLikes(),
                 'dislikes' => $post->getDislikes(),
